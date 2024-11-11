@@ -2,3 +2,4 @@ Flask==2.1.1
 requests==2.28.1
 urllib3==1.26.13
 python-dotenv==1.0.0
+Werkzeug==2.0.3  # 이 버전으로 고정
