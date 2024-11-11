@@ -8,8 +8,6 @@ from dotenv import load_dotenv
 
 # .env 파일에서 환경 변수 로드
 load_dotenv()
-print(os.getcwd())  # 현재 작업 디렉토리 확인
-print(os.listdir())
 
 # Flask 앱 초기화
 app = Flask(__name__)
@@ -61,6 +59,8 @@ def get_festivals():
 
     data = get_api_data(event_start_date)
     return jsonify(data)
-
+    
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Render에서 제공하는 포트 사용
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
