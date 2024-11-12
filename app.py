@@ -5,6 +5,7 @@ from urllib3.poolmanager import PoolManager
 import ssl
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 
 # .env 파일에서 환경 변수 로드
 load_dotenv()
@@ -73,13 +74,23 @@ def get_festivals():
     event_start_date = request.args.get('eventStartDate')
     area_code = request.args.get('areaCode')
 
+    # eventStartDate가 주어지지 않으면 기본값으로 현재 연도 사용
     if not event_start_date:
-        return jsonify({"error": "Missing required parameter: eventStartDate"}), 400
+        event_start_date = datetime.now().strftime("%Y")
 
+    # 만약 eventStartDate가 4자리 연도 형식인 경우, 해당 연도의 1월 1일로 설정
+    if len(event_start_date) == 4:
+        event_start_date = event_start_date + "0101"
+        event_end_date = event_start_date[:4] + "1231"
+    else:
+        event_end_date = event_end_date
     params = {
         "eventStartDate": event_start_date,
-        "areaCode": area_code
-    }
+        "eventEndDate": event_end_date
+    }    
+    # areaCode가 있는 경우 추가
+    if area_code:
+        params["areaCode"] = area_code
 
     data = call_api("searchFestival1", params)
     return jsonify(data)
@@ -116,6 +127,41 @@ def get_common():
     }
     data = call_api("detailCommon1", params)
     return jsonify(data)
+
+# 4. 위치기반 관광정보 조회 API
+@app.route('/api/nearbyFestivals', methods=['GET'])
+def get_nearby_festivals():
+    latitude = request.args.get('latitude')
+    longitude = request.args.get('longitude')
+    radius = request.args.get('radius', 5000)  # 기본 반경은 5km
+
+    if not latitude or not longitude:
+        return jsonify({"error": "Missing required parameters: latitude, longitude"}), 400
+
+    params = {
+        "mapX": longitude,
+        "mapY": latitude,
+        "radius": radius,
+        "contentTypeId": 15  # 축제/행사
+    }
+    data = call_api("locationBasedList1", params)
+    return jsonify(data)
+
+# 5. 키워드 검색 조회 API
+@app.route('/api/searchFestivals', methods=['GET'])
+def search_festivals():
+    keyword = request.args.get('keyword')
+
+    if not keyword:
+        return jsonify({"error": "Missing required parameter: keyword"}), 400
+
+    params = {
+        "keyword": keyword,
+        "contentTypeId": 15  # 축제/행사
+    }
+    data = call_api("searchKeyword1", params)
+    return jsonify(data)
+
 
 if __name__ == '__main__':
     # Render에서 제공하는 포트 사용
