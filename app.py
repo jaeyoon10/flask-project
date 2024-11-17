@@ -89,7 +89,7 @@ def get_festivals():
     params = {
         "eventStartDate": event_start_date,
         "eventEndDate": event_end_date,
-        "pageNO": page,
+        "pageNo": page,
         "numOfRows": page_size
     }    
     # areaCode가 있는 경우 추가
