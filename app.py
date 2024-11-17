@@ -73,6 +73,8 @@ def call_api(endpoint, params):
 def get_festivals():
     event_start_date = request.args.get('eventStartDate')
     area_code = request.args.get('areaCode')
+    page = int(request.args.get('page', 1)) # 페이지 번호, 기본값은 1
+    page_size = int(request.args.get('pageSize', 10)) #한 페이지의 아이템 수, 기본값은 10
 
     # eventStartDate가 주어지지 않으면 기본값으로 현재 연도 사용
     if not event_start_date:
@@ -86,7 +88,9 @@ def get_festivals():
         event_end_date = event_end_date
     params = {
         "eventStartDate": event_start_date,
-        "eventEndDate": event_end_date
+        "eventEndDate": event_end_date,
+        "pageNO": page,
+        "numOfRows": page_size
     }    
     # areaCode가 있는 경우 추가
     if area_code:
