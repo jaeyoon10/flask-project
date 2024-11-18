@@ -149,7 +149,26 @@ def get_nearby_festivals():
         "contentTypeId": 15  # 축제/행사
     }
     data = call_api("locationBasedList1", params)
-    return jsonify(data)
+    
+     # 필요한 정보만 필터링하여 반환
+    if 'response' in data and 'body' in data['response'] and 'items' in data['response']['body']:
+        items = data['response']['body']['items']['item']
+        filtered_items = [
+            {
+                "title": item.get("title"),
+                "latitude": item.get("mapy"),
+                "longitude": item.get("mapx"),
+                "firstimage": item.get("firstimage", ""),
+                "eventstartdate": item.get("eventstartdate"),
+                "eventenddate": item.get("eventenddate"),
+                "addr1": item.get("addr1"),
+                "contentId": item.get("contentid")  # 상세 조회를 위한 ID
+            }
+            for item in items
+        ]
+        return jsonify(filtered_items)
+    else:
+        return jsonify([])
 
 # 5. 키워드 검색 조회 API
 @app.route('/api/searchFestivals', methods=['GET'])
