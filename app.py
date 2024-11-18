@@ -133,15 +133,35 @@ def get_common():
     return jsonify(data)
 
 # 4. 위치기반 관광정보 조회 API
+@app.route('/api/nearbyFestivals', methods=['GET'])
+def get_nearby_festivals():
+    latitude = request.args.get('latitude')
+    longitude = request.args.get('longitude')
+    radius = request.args.get('radius', 5000)  # 기본 반경은 5km
+
+    if not latitude or not longitude:
+        return jsonify({"error": "Missing required parameters: latitude, longitude"}), 400
+
+    params = {
+        "mapX": longitude,
+        "mapY": latitude,
+        "radius": radius,
+        "contentTypeId": 15  # 축제/행사
+    }
+    data = call_api("locationBasedList1", params)
+    return jsonify(data)
+
+# 5. 키워드 검색 조회 API
 @app.route('/api/searchFestivals', methods=['GET'])
 def search_festivals():
     keyword = request.args.get('keyword')
     page = int(request.args.get('page', 1))
     page_size = int(request.args.get('pageSize', 10))
-
+    
     if not keyword:
         return jsonify({"error": "Missing required parameter: keyword"}), 400
 
+    # 키워드 검색을 위한 파라미터 설정
     params = {
         "keyword": keyword,
         "contentTypeId": 15,  # 축제/행사
@@ -149,18 +169,21 @@ def search_festivals():
         "numOfRows": page_size,
         "_type": "json"
     }
-
-    # 키워드 검색 API 호출
+    
+    # 1. 키워드 검색 API 호출
     data = call_api("searchKeyword1", params)
-
-    # 필요한 정보만 필터링하여 반환
+    
+    # 검색 결과에서 필요한 정보만 필터링
     if 'response' in data and 'body' in data['response'] and 'items' in data['response']['body']:
         items = data['response']['body']['items']['item']
         enriched_items = []
 
+        # 2. 각 항목에 대해 추가 조회하여 기간 정보를 가져옴
         for item in items:
             content_id = item.get("contentid")
+            
             if content_id:
+                # 추가 조회를 통해 기간 정보 가져오기
                 detail_params = {
                     "contentId": content_id,
                     "contentTypeId": 15,
@@ -168,11 +191,13 @@ def search_festivals():
                 }
                 detail_data = call_api("detailCommon1", detail_params)
 
+                # 기간 정보 추가
                 if 'response' in detail_data and 'body' in detail_data['response'] and 'items' in detail_data['response']['body']:
                     detail_item = detail_data['response']['body']['items']['item'][0]
                     item["eventstartdate"] = detail_item.get("eventstartdate")
                     item["eventenddate"] = detail_item.get("eventenddate")
 
+            # 필요한 필드만 선택하여 응답 데이터 구성
             enriched_items.append({
                 "title": item.get("title"),
                 "latitude": item.get("mapy"),
@@ -184,20 +209,11 @@ def search_festivals():
                 "contentId": item.get("contentid")
             })
 
-        # 객체 형태로 응답을 반환
-        return jsonify({
-            "response": {
-                "items": enriched_items
-            },
-            "currentPage": page,
-            "hasMore": len(items) == page_size
-        })
+        # 최종 결과 반환
+        return jsonify(enriched_items)
     else:
-        return jsonify({
-            "response": {"items": []},
-            "currentPage": page,
-            "hasMore": False
-        })
+        return jsonify([])  # 검색 결과가 없을 경우 빈 리스트 반환
+
 if __name__ == '__main__':
     # Render에서 제공하는 포트 사용
     port = int(os.environ.get("PORT", 5000))
