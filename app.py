@@ -174,16 +174,49 @@ def get_nearby_festivals():
 @app.route('/api/searchFestivals', methods=['GET'])
 def search_festivals():
     keyword = request.args.get('keyword')
-
+    page = int(request.args.get('page', 1))
+    page_size = int(request.args.get('pageSize', 10))
+    
     if not keyword:
         return jsonify({"error": "Missing required parameter: keyword"}), 400
 
+    # 현재 연도의 기간 설정
+    current_year = datetime.now().year
+    event_start_date = f"{current_year}0101"
+    event_end_date = f"{current_year}1231"
+
+    # API 요청 파라미터 설정
     params = {
         "keyword": keyword,
-        "contentTypeId": 15  # 축제/행사
+        "contentTypeId": 15,  # 축제/행사
+        "eventStartDate": event_start_date,
+        "eventEndDate": event_end_date,
+        "pageNo": page,
+        "numOfRows": page_size,
+        "_type": "json"
     }
+
     data = call_api("searchKeyword1", params)
-    return jsonify(data)
+
+    # 필요한 정보만 필터링하여 반환
+    if 'response' in data and 'body' in data['response'] and 'items' in data['response']['body']:
+        items = data['response']['body']['items']['item']
+        filtered_items = [
+            {
+                "title": item.get("title"),
+                "latitude": item.get("mapy"),
+                "longitude": item.get("mapx"),
+                "firstimage": item.get("firstimage", ""),
+                "eventstartdate": item.get("eventstartdate"),
+                "eventenddate": item.get("eventenddate"),
+                "addr1": item.get("addr1"),
+                "contentId": item.get("contentid")  # 상세 조회를 위한 ID
+            }
+            for item in items
+        ]
+        return jsonify(filtered_items)
+    else:
+        return jsonify([])
 
 
 if __name__ == '__main__':
