@@ -77,6 +77,7 @@ def get_festivals():
     page_size = int(request.args.get('pageSize', 10))
     
     current_date = datetime.now()
+    current_year = current_date.year
     current_year_month = current_date.strftime("%Y%m")
     
     params = {
@@ -109,13 +110,16 @@ def get_festivals():
         parsed_date = parse_date(start_date) if start_date else None
 
         if parsed_date:
-            if parsed_date.strftime("%Y%m") == current_year_month:
+            # 현재 연도 및 현재 달의 축제
+            if parsed_date.year == current_year and parsed_date.strftime("%Y%m") == current_year_month:
                 current_month.append(festival)
-            elif parsed_date > current_date:
+            # 미래 연도 및 월의 축제
+            elif parsed_date.year > current_year or (parsed_date.year == current_year and parsed_date.month > current_date.month):
                 upcoming.append(festival)
+            # 과거 연도 및 월의 축제
             else:
                 past.append(festival)
-
+                
     # 각 리스트를 정렬합니다.
     current_month.sort(key=lambda x: x["eventstartdate"])
     upcoming.sort(key=lambda x: x["eventstartdate"])
