@@ -73,32 +73,69 @@ def call_api(endpoint, params):
 def get_festivals():
     event_start_date = request.args.get('eventStartDate')
     area_code = request.args.get('areaCode')
-    page = int(request.args.get('page', 1)) # 페이지 번호, 기본값은 1
-    page_size = int(request.args.get('pageSize', 10)) #한 페이지의 아이템 수, 기본값은 10
+    page = int(request.args.get('page', 1))  # 페이지 번호, 기본값은 1
+    page_size = int(request.args.get('pageSize', 10))  # 한 페이지의 아이템 수, 기본값은 10
 
-    # eventStartDate가 주어지지 않으면 기본값으로 현재 연도 사용
+    # 현재 날짜 가져오기
+    current_date = datetime.now()
+    current_year = current_date.strftime("%Y")
+    current_month = current_date.strftime("%m")
+    current_ym = current_date.strftime("%Y%m")
+
+    # eventStartDate가 주어지지 않으면 현재 연도로 설정
     if not event_start_date:
-        event_start_date = datetime.now().strftime("%Y")
+        event_start_date = current_year + "0101"
 
-    # 만약 eventStartDate가 4자리 연도 형식인 경우, 해당 연도의 1월 1일로 설정
-    if len(event_start_date) == 4:
-        event_start_date = event_start_date + "0101"
-        event_end_date = event_start_date[:4] + "1231"
-    else:
-        event_end_date = event_end_date
+    event_end_date = current_year + "1231"
+
     params = {
         "eventStartDate": event_start_date,
         "eventEndDate": event_end_date,
         "pageNo": page,
-        "numOfRows": page_size
-    }    
-    # areaCode가 있는 경우 추가
+        "numOfRows": page_size,
+        "MobileOS": "AND",
+        "MobileApp": "MyApp",
+        "_type": "json"
+    }
+
     if area_code:
         params["areaCode"] = area_code
 
     data = call_api("searchFestival1", params)
-    return jsonify(data)
 
+    # 데이터가 없을 경우 바로 반환
+    if "response" not in data or "body" not in data["response"]:
+        return jsonify(data)
+
+    festivals = data["response"]["body"].get("items", {}).get("item", [])
+
+    # 축제 데이터가 유효한지 확인하고 정렬
+    current_month_festivals = []
+    upcoming_festivals = []
+    past_festivals = []
+
+    for festival in festivals:
+        start_date = festival.get("eventstartdate")
+        if start_date and len(start_date) == 8:
+            festival_date = datetime.strptime(start_date, "%Y%m%d")
+            
+            # 현재 달의 축제
+            if festival_date.strftime("%Y%m") == current_ym:
+                current_month_festivals.append(festival)
+            elif festival_date > current_date:
+                upcoming_festivals.append(festival)
+            else:
+                past_festivals.append(festival)
+
+    # 현재 달 -> 이후 달 -> 이전 달 순으로 정렬
+    current_month_festivals.sort(key=lambda x: x["eventstartdate"])
+    upcoming_festivals.sort(key=lambda x: x["eventstartdate"])
+    past_festivals.sort(key=lambda x: x["eventstartdate"], reverse=True)
+
+    sorted_festivals = current_month_festivals + upcoming_festivals + past_festivals
+    data["response"]["body"]["items"]["item"] = sorted_festivals
+
+    return jsonify(data)
 # 2. 소개정보조회 API
 @app.route('/api/intro', methods=['GET'])
 def get_intro():
