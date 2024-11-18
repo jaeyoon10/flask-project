@@ -133,43 +133,6 @@ def get_common():
     return jsonify(data)
 
 # 4. 위치기반 관광정보 조회 API
-@app.route('/api/nearbyFestivals', methods=['GET'])
-def get_nearby_festivals():
-    latitude = request.args.get('latitude')
-    longitude = request.args.get('longitude')
-    radius = request.args.get('radius', 5000)  # 기본 반경은 5km
-
-    if not latitude or not longitude:
-        return jsonify({"error": "Missing required parameters: latitude, longitude"}), 400
-
-    params = {
-        "mapX": longitude,
-        "mapY": latitude,
-        "radius": radius,
-        "contentTypeId": 15  # 축제/행사
-    }
-    data = call_api("locationBasedList1", params)
-    
-     # 필요한 정보만 필터링하여 반환
-    if 'response' in data and 'body' in data['response'] and 'items' in data['response']['body']:
-        items = data['response']['body']['items']['item']
-        filtered_items = [
-            {
-                "title": item.get("title"),
-                "latitude": item.get("mapy"),
-                "longitude": item.get("mapx"),
-                "firstimage": item.get("firstimage", ""),
-                "eventstartdate": item.get("eventstartdate"),
-                "eventenddate": item.get("eventenddate"),
-                "addr1": item.get("addr1"),
-                "contentId": item.get("contentid")  # 상세 조회를 위한 ID
-            }
-            for item in items
-        ]
-        return jsonify(filtered_items)
-    else:
-        return jsonify([])
-
 @app.route('/api/searchFestivals', methods=['GET'])
 def search_festivals():
     keyword = request.args.get('keyword')
