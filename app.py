@@ -170,13 +170,12 @@ def get_nearby_festivals():
     else:
         return jsonify([])
 
-# 5. 키워드 검색 조회 API (기간 정보를 추가적으로 조회)
 @app.route('/api/searchFestivals', methods=['GET'])
 def search_festivals():
     keyword = request.args.get('keyword')
     page = int(request.args.get('page', 1))
     page_size = int(request.args.get('pageSize', 10))
-    
+
     if not keyword:
         return jsonify({"error": "Missing required parameter: keyword"}), 400
 
@@ -187,10 +186,10 @@ def search_festivals():
         "numOfRows": page_size,
         "_type": "json"
     }
-    
+
     # 키워드 검색 API 호출
     data = call_api("searchKeyword1", params)
-    
+
     # 필요한 정보만 필터링하여 반환
     if 'response' in data and 'body' in data['response'] and 'items' in data['response']['body']:
         items = data['response']['body']['items']['item']
@@ -199,36 +198,43 @@ def search_festivals():
         for item in items:
             content_id = item.get("contentid")
             if content_id:
-                # 각 축제에 대해 기간 정보를 추가로 조회
                 detail_params = {
                     "contentId": content_id,
                     "contentTypeId": 15,
                     "_type": "json"
                 }
                 detail_data = call_api("detailCommon1", detail_params)
-                
-                # 기간 정보 추가
+
                 if 'response' in detail_data and 'body' in detail_data['response'] and 'items' in detail_data['response']['body']:
                     detail_item = detail_data['response']['body']['items']['item'][0]
                     item["eventstartdate"] = detail_item.get("eventstartdate")
                     item["eventenddate"] = detail_item.get("eventenddate")
-            
-            # 최종 데이터에 추가
+
             enriched_items.append({
                 "title": item.get("title"),
                 "latitude": item.get("mapy"),
                 "longitude": item.get("mapx"),
                 "firstimage": item.get("firstimage", ""),
-                "eventstartdate": item.get("eventstartdate"),
-                "eventenddate": item.get("eventenddate"),
+                "eventstartdate": item.get("eventstartdate", "기간 정보 없음"),
+                "eventenddate": item.get("eventenddate", "기간 정보 없음"),
                 "addr1": item.get("addr1"),
                 "contentId": item.get("contentid")
             })
 
-        return jsonify(enriched_items)
+        # 객체 형태로 응답을 반환
+        return jsonify({
+            "response": {
+                "items": enriched_items
+            },
+            "currentPage": page,
+            "hasMore": len(items) == page_size
+        })
     else:
-        return jsonify([])
-
+        return jsonify({
+            "response": {"items": []},
+            "currentPage": page,
+            "hasMore": False
+        })
 if __name__ == '__main__':
     # Render에서 제공하는 포트 사용
     port = int(os.environ.get("PORT", 5000))
