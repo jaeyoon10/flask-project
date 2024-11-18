@@ -122,14 +122,40 @@ def get_common():
     if not content_id:
         return jsonify({"error": "Missing required parameter: contentId"}), 400
 
+    # 기본 정보 조회
     params = {
         "contentId": content_id,
         "defaultYN": "Y",
         "firstImageYN": "Y",
         "addrinfoYN": "Y",
-        "overviewYN": "Y"
+        "overviewYN": "Y",
+        "_type": "json"
     }
     data = call_api("detailCommon1", params)
+
+    # 만약 기본 정보 조회에서 기간 정보가 없다면 추가로 detailIntro1 호출
+    if data and 'response' in data and 'body' in data['response']:
+        items = data['response']['body'].get('items', {}).get('item', [{}])
+        if items and isinstance(items, list) and len(items) > 0:
+            item = items[0]
+            # 기간 정보가 없으면 추가 조회
+            if not item.get('eventstartdate') or not item.get('eventenddate'):
+                # 기간 정보를 가져오기 위해 detailIntro1 호출
+                intro_params = {
+                    "contentId": content_id,
+                    "contentTypeId": 15,
+                    "_type": "json"
+                }
+                intro_data = call_api("detailIntro1", intro_params)
+
+                # 기간 정보가 있으면 추가
+                if intro_data and 'response' in intro_data and 'body' in intro_data['response']:
+                    intro_items = intro_data['response']['body'].get('items', {}).get('item', [{}])
+                    if intro_items and isinstance(intro_items, list) and len(intro_items) > 0:
+                        intro_item = intro_items[0]
+                        item['eventstartdate'] = intro_item.get('eventstartdate')
+                        item['eventenddate'] = intro_item.get('eventenddate')
+
     return jsonify(data)
 
 # 4. 위치기반 관광정보 조회 API
