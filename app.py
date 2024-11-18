@@ -170,7 +170,7 @@ def get_nearby_festivals():
     else:
         return jsonify([])
 
-# 5. 키워드 검색 조회 API
+# 5. 키워드 검색 조회 API (기간 정보를 추가적으로 조회)
 @app.route('/api/searchFestivals', methods=['GET'])
 def search_festivals():
     keyword = request.args.get('keyword')
@@ -180,29 +180,41 @@ def search_festivals():
     if not keyword:
         return jsonify({"error": "Missing required parameter: keyword"}), 400
 
-    # 현재 연도의 기간 설정
-    current_year = datetime.now().year
-    event_start_date = f"{current_year}0101"
-    event_end_date = f"{current_year}1231"
-
-    # API 요청 파라미터 설정
     params = {
         "keyword": keyword,
         "contentTypeId": 15,  # 축제/행사
-        "eventStartDate": event_start_date,
-        "eventEndDate": event_end_date,
         "pageNo": page,
         "numOfRows": page_size,
         "_type": "json"
     }
-
+    
+    # 키워드 검색 API 호출
     data = call_api("searchKeyword1", params)
-
+    
     # 필요한 정보만 필터링하여 반환
     if 'response' in data and 'body' in data['response'] and 'items' in data['response']['body']:
         items = data['response']['body']['items']['item']
-        filtered_items = [
-            {
+        enriched_items = []
+
+        for item in items:
+            content_id = item.get("contentid")
+            if content_id:
+                # 각 축제에 대해 기간 정보를 추가로 조회
+                detail_params = {
+                    "contentId": content_id,
+                    "contentTypeId": 15,
+                    "_type": "json"
+                }
+                detail_data = call_api("detailCommon1", detail_params)
+                
+                # 기간 정보 추가
+                if 'response' in detail_data and 'body' in detail_data['response'] and 'items' in detail_data['response']['body']:
+                    detail_item = detail_data['response']['body']['items']['item'][0]
+                    item["eventstartdate"] = detail_item.get("eventstartdate")
+                    item["eventenddate"] = detail_item.get("eventenddate")
+            
+            # 최종 데이터에 추가
+            enriched_items.append({
                 "title": item.get("title"),
                 "latitude": item.get("mapy"),
                 "longitude": item.get("mapx"),
@@ -210,14 +222,12 @@ def search_festivals():
                 "eventstartdate": item.get("eventstartdate"),
                 "eventenddate": item.get("eventenddate"),
                 "addr1": item.get("addr1"),
-                "contentId": item.get("contentid")  # 상세 조회를 위한 ID
-            }
-            for item in items
-        ]
-        return jsonify(filtered_items)
+                "contentId": item.get("contentid")
+            })
+
+        return jsonify(enriched_items)
     else:
         return jsonify([])
-
 
 if __name__ == '__main__':
     # Render에서 제공하는 포트 사용
