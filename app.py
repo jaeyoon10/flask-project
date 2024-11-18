@@ -108,6 +108,7 @@ def get_festivals():
         return jsonify(data)
 
     festivals = data["response"]["body"].get("items", {}).get("item", [])
+    unique_festivals = {festival['contentid']: festival for festival in festivals}.values()
 
     # 축제 데이터가 유효한지 확인하고 정렬
     current_month_festivals = []
