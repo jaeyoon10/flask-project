@@ -245,6 +245,38 @@ def search_festivals():
     data = call_api("searchKeyword1", params)
     return jsonify(data)
 
+# 지역 코드 캐싱
+cached_area_codes = None  # 전역 변수로 캐싱
+
+@app.route('/api/areaCodes', methods=['GET'])
+def get_area_codes():
+    global cached_area_codes
+    if cached_area_codes is None:  # 캐싱된 데이터가 없을 경우 API 호출
+        params = {"_type": "json"}
+        data = call_api("areaCode1", params)
+        if "response" in data:  # 성공적으로 데이터를 가져왔을 경우
+            cached_area_codes = data
+    return jsonify(cached_area_codes)
+
+# 6. 지역 코드 조회 API
+@app.route('/api/regionFestivals', methods=['GET'])
+def get_region_festivals():
+    area_code = request.args.get('areaCode')  # 지역 코드
+    page = int(request.args.get('page', 1))
+    page_size = int(request.args.get('pageSize', 10))
+
+    if not area_code:
+        return jsonify({"error": "Missing required parameter: areaCode"}), 400
+
+    params = {
+        "areaCode": area_code,
+        "pageNo": page,
+        "numOfRows": page_size,
+        "_type": "json"
+    }
+    data = call_api("searchFestival1", params)
+    return jsonify(data)
+
 
 if __name__ == '__main__':
     # Render에서 제공하는 포트 사용
