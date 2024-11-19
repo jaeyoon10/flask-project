@@ -143,6 +143,15 @@ def get_intro():
         "contentTypeId": 15
     }
     data = call_api("detailIntro1", params)
+
+    # 가격 및 이용 시간 정보 포함
+    if data and 'response' in data and 'body' in data['response']:
+        items = data['response']['body'].get('items', {}).get('item', [{}])
+        if items and isinstance(items, list) and len(items) > 0:
+            item = items[0]
+            item['usetimefestival'] = item.get('usetimefestival', "가격 정보 없음")
+            item['playtime'] = item.get('playtime', "운영 시간 정보 없음")
+
     return jsonify(data)
     
 # 3. 공통정보조회 API
