@@ -6,12 +6,19 @@ import ssl
 import os
 from dotenv import load_dotenv
 from datetime import datetime
+import re  # 추가
 
 # .env 파일에서 환경 변수 로드
 load_dotenv()
 
 # Flask 앱 초기화
 app = Flask(__name__)
+
+def clean_html_tags(text):
+    """HTML 태그를 제거하는 함수"""
+    if text:
+        return re.sub(r'<br\s*/?>', ' ', text)  # <br>을 줄바꿈 문자로 변환
+    return text
 
 # 한국관광공사 API 정보
 API_KEY = os.getenv("API_KEY")
