@@ -187,10 +187,10 @@ def get_common():
         items = data['response']['body'].get('items', {}).get('item', [{}])
         if items and isinstance(items, list) and len(items) > 0:
             item = items[0]
-            
+
             # 연락처에 <br> 태그 제거
             if 'tel' in item:
-                item['tel'] = clean_html(item['tel'])
+                item['tel'] = clean_html_tags(item['tel'])
             # 기간 정보가 없으면 추가 조회
             if not item.get('eventstartdate') or not item.get('eventenddate'):
                 # 기간 정보를 가져오기 위해 detailIntro1 호출
