@@ -155,9 +155,11 @@ def get_intro():
     if data and 'response' in data and 'body' in data['response']:
         items = data['response']['body'].get('items', {}).get('item', [{}])
         if items and isinstance(items, list) and len(items) > 0:
-            item = items[0]
-            item['usetimefestival'] = item.get('usetimefestival', "가격 정보 없음")
-            item['playtime'] = item.get('playtime', "운영 시간 정보 없음")
+            for item in items:
+                if 'usetimefestival' in item:
+                    item['usetimefestival'] = clean_html_tags(item['usetimefestival'])
+                if 'playtime' in item:
+                    item['playtime'] = clean_html_tags(item['playtime'])
 
     return jsonify(data)
     
