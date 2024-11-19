@@ -78,41 +78,48 @@ def call_api(endpoint, params):
 # 1. 행사정보조회 API
 @app.route('/api/festivals', methods=['GET'])
 def get_festivals():
-    event_start_date = request.args.get('eventStartDate')
     area_code = request.args.get('areaCode')  # 추가된 부분: areaCode 가져오기
-    page = int(request.args.get('page', 1))
-    page_size = int(request.args.get('pageSize', 10))
-    
     current_date = datetime.now()
     current_year = current_date.year
     current_year_month = current_date.strftime("%Y%m")
     
-    params = {
-        "eventStartDate": current_date.strftime("%Y0101"),
-        "eventEndDate": current_date.strftime("%Y1231"),
-        "pageNo": page,
-        "numOfRows": page_size,
-        "_type": "json"
-    }
+    all_festivals = []  # 모든 데이터를 저장할 리스트
+    page = 1
+    page_size = 100
 
-    # 만약 areaCode가 주어지면 필터에 추가합니다.
-    if area_code:
-        params["areaCode"] = area_code
+    while True:
+        params = {
+            "eventStartDate": current_date.strftime("%Y0101"),
+            "eventEndDate": current_date.strftime("%Y1231"),
+            "pageNo": page,
+            "numOfRows": page_size,
+            "_type": "json"
+        }
 
-    # 한국관광공사 API 호출
-    data = call_api("searchFestival1", params)
-    festivals = data.get("response", {}).get("body", {}).get("items", {}).get("item", [])
+        # 만약 areaCode가 주어지면 필터에 추가
+        if area_code:
+            params["areaCode"] = area_code
+
+        # 한국관광공사 API 호출
+        data = call_api("searchFestival1", params)
+        festivals = data.get("response", {}).get("body", {}).get("items", {}).get("item", [])
+        
+        if not festivals:  # 더 이상 데이터가 없으면 중단
+            break
+
+        all_festivals.extend(festivals)  # 결과를 병합
+        page += 1  # 다음 페이지로 이동
 
     # 날짜를 "yyyyMMdd" 형식으로 파싱하는 함수
     def parse_date(date_str):
         return datetime.strptime(date_str, "%Y%m%d") if date_str else None
 
-    # 축제 데이터를 현재 달, 이후 달, 과거 달로 분류합니다.
+    # 축제 데이터를 현재 달, 이후 달, 과거 달로 분류
     current_month = []
     upcoming = []
     past = []
 
-    for festival in festivals:
+    for festival in all_festivals:
         start_date = festival.get("eventstartdate")
         parsed_date = parse_date(start_date) if start_date else None
 
@@ -126,17 +133,17 @@ def get_festivals():
             # 과거 연도 및 월의 축제
             else:
                 past.append(festival)
-                
-    # 각 리스트를 정렬합니다.
+    
+    # 각 리스트를 정렬
     current_month.sort(key=lambda x: x["eventstartdate"])
     upcoming.sort(key=lambda x: x["eventstartdate"])
     past.sort(key=lambda x: x["eventstartdate"], reverse=True)
 
-    # 현재 달 -> 이후 달 -> 과거 달 순으로 병합합니다.
+    # 현재 달 -> 이후 달 -> 과거 달 순으로 병합
     sorted_festivals = current_month + upcoming + past
-    data["response"]["body"]["items"]["item"] = sorted_festivals
 
-    return jsonify(data)
+    return jsonify({"festivals": sorted_festivals})
+
 # 2. 소개정보조회 API
 @app.route('/api/intro', methods=['GET'])
 def get_intro():
@@ -258,25 +265,51 @@ def get_area_codes():
             cached_area_codes = data
     return jsonify(cached_area_codes)
 
+    # 지역 코드 매핑
+area_code_mapping = {
+    "서울": 1,
+    "인천": 2,
+    "대전": 3,
+    "대구": 4,
+    "광주": 5,
+    "부산": 6,
+    "울산": 7,
+    "세종": 8,
+    "경기": 31,
+    "강원": 32,
+    "충북": 33,
+    "충남": 34,
+    "경북": 35,
+    "경남": 36,
+    "전북": 37,
+    "전남": 38,
+    "제주": 39,
+}
+
 # 6. 지역 코드 조회 API
 @app.route('/api/regionFestivals', methods=['GET'])
 def get_region_festivals():
-    area_code = request.args.get('areaCode')  # 지역 코드
+    region_name = request.args.get('regionName')  # 지역 이름 (예: "세종")
     page = int(request.args.get('page', 1))
     page_size = int(request.args.get('pageSize', 10))
 
-    if not area_code:
-        return jsonify({"error": "Missing required parameter: areaCode"}), 400
+    # 지역 코드 찾기
+    area_code = area_code_mapping.get(region_name)
 
+    if not area_code:
+        return jsonify({"error": f"Invalid region name: {region_name}"}), 400
+
+    # API 호출 파라미터
     params = {
         "areaCode": area_code,
         "pageNo": page,
         "numOfRows": page_size,
         "_type": "json"
     }
+
+    # API 호출
     data = call_api("searchFestival1", params)
     return jsonify(data)
-
 
 if __name__ == '__main__':
     # Render에서 제공하는 포트 사용
