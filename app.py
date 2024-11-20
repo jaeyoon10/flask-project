@@ -80,9 +80,8 @@ def call_api(endpoint, params):
 def get_festivals():
     event_start_date = request.args.get('eventStartDate')
     area_code = request.args.get('areaCode')  # 추가된 부분: areaCode 가져오기
-    page = int(request.args.get('page', 1))
-    page_size = int(request.args.get('pageSize', 100))
-    
+    page_size = 100  # 한국관광공사 API 최대 페이지 크기
+    total_pages = 16  # 1,587개의 데이터를 기준으로 페이지 수 설정
     current_date = datetime.now()
     current_year = current_date.year
     current_year_month = current_date.strftime("%Y%m")
@@ -90,7 +89,6 @@ def get_festivals():
     params = {
         "eventStartDate": current_date.strftime("%Y0101"),
         "eventEndDate": current_date.strftime("%Y1231"),
-        "pageNo": page,
         "numOfRows": page_size,
         "_type": "json"
     }
@@ -99,10 +97,22 @@ def get_festivals():
     if area_code:
         params["areaCode"] = area_code
 
+    all_festivals = []  # 모든 축제를 저장할 리스트
+
     # 한국관광공사 API 호출
     data = call_api("searchFestival1", params)
     festivals = data.get("response", {}).get("body", {}).get("items", {}).get("item", [])
 
+    # 여러 페이지의 데이터를 순회하며 병합
+    for page in range(1, total_pages + 1):
+        params["pageNo"] = page
+        data = call_api("searchFestival1", params)
+        festivals = data.get("response", {}).get("body", {}).get("items", {}).get("item", [])
+        all_festivals.extend(festivals)
+
+        # 모든 데이터를 가져왔다면 중단
+        if len(festivals) < page_size:
+            break
     # 날짜를 "yyyyMMdd" 형식으로 파싱하는 함수
     def parse_date(date_str):
         return datetime.strptime(date_str, "%Y%m%d") if date_str else None
