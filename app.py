@@ -108,7 +108,9 @@ def get_festivals():
         params["pageNo"] = page
         data = call_api("searchFestival1", params)
         festivals = data.get("response", {}).get("body", {}).get("items", {}).get("item", [])
-        all_festivals.extend(festivals)
+        
+        if festivals:
+            all_festivals.extend(festivals)
 
         # 모든 데이터를 가져왔다면 중단
         if len(festivals) < page_size:
@@ -146,7 +148,10 @@ def get_festivals():
     sorted_festivals = current_month + upcoming + past
     data["response"]["body"]["items"]["item"] = sorted_festivals
 
-    return jsonify(data)
+    return jsonify({
+        "total_count": len(all_festivals),
+        "festival": sorted_festivals,
+    })
     
 # 2. 소개정보조회 API
 @app.route('/api/intro', methods=['GET'])
