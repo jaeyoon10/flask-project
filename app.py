@@ -81,7 +81,7 @@ def get_festivals():
     event_start_date = request.args.get('eventStartDate')
     area_code = request.args.get('areaCode')  # 추가된 부분: areaCode 가져오기
     page = int(request.args.get('page', 1))
-    page_size = int(request.args.get('pageSize', 1500))
+    page_size = int(request.args.get('pageSize', 500))
     
     current_date = datetime.now()
     current_year = current_date.year
@@ -245,6 +245,8 @@ def search_festivals():
     }
     data = call_api("searchKeyword1", params)
     return jsonify(data)
+
+
 
 # 지역 코드 캐싱
 cached_area_codes = None  # 전역 변수로 캐싱
