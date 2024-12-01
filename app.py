@@ -307,51 +307,6 @@ def get_region_festivals():
     data = call_api("searchFestival1", params)
     return jsonify(data)
 
-    # 6. 카테고리별 축제 조회 API
-@app.route('/api/categoryFestivals', methods=['GET'])
-def get_category_festivals():
-    category = request.args.get('category')
-    
-    if not category:
-        return jsonify({"error": "Missing required parameter: category"}), 400
-    
-    # 서비스 분류 코드 매핑
-    category_mapping = {
-        "스포츠": ["A02081200"],  # 스포츠경기
-        "영화": ["A02081100"],  # 영화
-        "음악": ["A02080900", "A02081000"],  # 클래식음악회, 대중콘서트
-        "예술": ["A02080300", "A02080400", "A02080800"],  # 뮤지컬, 오페라, 무용
-        "문학": ["A02060900", "A02061000"],  # 도서관, 대형서점
-        "힐링": ["A02020300", "A02020400", "A02020500"],  # 온천/욕장/스파, 이색찜질방, 헬스투어
-        "환경": ["A02020700"],  # 공원
-        "여행": ["A02020200"],  # 관광단지
-        "음식": ["A03010100", "A03010200"] #음식
-    }
-    
-    # 해당 카테고리에 대한 코드 확인
-    service_codes = category_mapping.get(category)
-    
-    if not service_codes:
-        return jsonify({"error": f"No data available for category: {category}"}), 400
-    
-    # API 요청 파라미터 준비
-    params = {
-        "contentTypeId": 15,  # 축제/행사
-        "cat1": "A02",
-        "cat2": None,
-        "cat3": None
-    }
-
-    # 여러 코드로 필터링
-    results = []
-    for code in service_codes:
-        params["cat3"] = code
-        response = call_api("categoryBasedList1", params)
-        if 'response' in response and 'body' in response['response'] and 'items' in response['response']['body']:
-            results.extend(response['response']['body']['items']['item'])
-
-    return jsonify({"category": category, "results": results})
-
 if __name__ == '__main__':
     # Render에서 제공하는 포트 사용
     port = int(os.environ.get("PORT", 5000))
